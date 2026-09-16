@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { constructor, methods, prototypeFrom, receiver, requiresNew } from "../interpreter/native.js"
-import { PendingThrow, typeError } from "../interpreter/model.js"
+import { typeError } from "../interpreter/model.js"
 import { entries, Arr, HeadersObj, Obj } from "../interpreter/objects.js"
 import { applyCollectionCallback } from "../interpreter/callback.js"
 import { isRuntimeReference } from "../interpreter/references.js"
@@ -13,7 +13,6 @@ const attempt = <T>(run: () => T): T => {
   try {
     return run()
   } catch (error) {
-    if (error instanceof PendingThrow) throw error
     throw typeError(error instanceof Error ? error.message : String(error))
   }
 }
@@ -53,8 +52,8 @@ export const headersGlobal = <R>(ctx: Interpreter<R>) => {
       2,
       (thisValue, args) => {
         requireArgs("append", args, 2)
-        attempt(() => self(thisValue, "append").headers.append(arg(args, 0), arg(args, 1)))
-        return undefined
+        const target = self(thisValue, "append").headers
+        return attempt(() => target.append(arg(args, 0), arg(args, 1)))
       },
     ],
     [
@@ -62,8 +61,8 @@ export const headersGlobal = <R>(ctx: Interpreter<R>) => {
       1,
       (thisValue, args) => {
         requireArgs("delete", args, 1)
-        attempt(() => self(thisValue, "delete").headers.delete(arg(args, 0)))
-        return undefined
+        const target = self(thisValue, "delete").headers
+        return attempt(() => target.delete(arg(args, 0)))
       },
     ],
     [
@@ -71,7 +70,8 @@ export const headersGlobal = <R>(ctx: Interpreter<R>) => {
       1,
       (thisValue, args) => {
         requireArgs("get", args, 1)
-        return attempt(() => self(thisValue, "get").headers.get(arg(args, 0)))
+        const target = self(thisValue, "get").headers
+        return attempt(() => target.get(arg(args, 0)))
       },
     ],
     ["getSetCookie", 0, (thisValue) => wrap(self(thisValue, "getSetCookie").headers.getSetCookie())],
@@ -80,7 +80,8 @@ export const headersGlobal = <R>(ctx: Interpreter<R>) => {
       1,
       (thisValue, args) => {
         requireArgs("has", args, 1)
-        return attempt(() => self(thisValue, "has").headers.has(arg(args, 0)))
+        const target = self(thisValue, "has").headers
+        return attempt(() => target.has(arg(args, 0)))
       },
     ],
     [
@@ -88,8 +89,8 @@ export const headersGlobal = <R>(ctx: Interpreter<R>) => {
       2,
       (thisValue, args) => {
         requireArgs("set", args, 2)
-        attempt(() => self(thisValue, "set").headers.set(arg(args, 0), arg(args, 1)))
-        return undefined
+        const target = self(thisValue, "set").headers
+        return attempt(() => target.set(arg(args, 0), arg(args, 1)))
       },
     ],
     ["keys", 0, (thisValue) => wrap(Array.from(self(thisValue, "keys").headers.keys()))],

@@ -124,7 +124,10 @@ const readPair = <R>(ctx: Interpreter<R>, value: unknown, label: string): Effect
     }
   })
 
-/** Reads a synchronous iterable of `[name, value]` pairs as strings; `undefined` when `init` is not iterable. */
+/**
+ * Reads a synchronous iterable of `[name, value]` pairs as strings; `undefined` when `init` is not iterable. As in
+ * WebIDL, the whole sequence is converted before any pair's length is checked.
+ */
 export const readPairs = <R>(
   ctx: Interpreter<R>,
   init: unknown,
@@ -138,7 +141,7 @@ export const readPairs = <R>(
       const step = yield* cursor.next
       if (step.done) {
         if (pairs.some((entry) => entry.length !== 2)) throw typeError(`${label} expects iterable [name, value] pairs.`)
-        return pairs.map((entry): [string, string] => [entry[0] ?? "", entry[1] ?? ""])
+        return pairs as Array<[string, string]>
       }
       pairs.push(yield* preserveConsumerError(cursor, readPair(ctx, step.value, label)))
     }
