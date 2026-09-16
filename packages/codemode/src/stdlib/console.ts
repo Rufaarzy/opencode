@@ -12,6 +12,7 @@ import {
   SetObj,
   URLObj,
   URLSearchParamsObj,
+  HeadersObj,
 } from "../interpreter/objects.js"
 import { containsOpaqueReference, isRuntimeReference } from "../interpreter/references.js"
 import type { Interpreter } from "../interpreter/interpreter.js"
@@ -66,6 +67,10 @@ const formatConsoleValue = (value: unknown, seen: Set<object>, depth: number): s
   if (value instanceof RegExpObj) return coerceToString(value)
   if (value instanceof URLObj) return coerceToString(value)
   if (value instanceof URLSearchParamsObj) return coerceToString(value)
+  if (value instanceof HeadersObj) {
+    const record = Object.fromEntries(value.headers)
+    return `Headers(${Object.keys(record).length}) ${JSON.stringify(record)}`
+  }
   if (value instanceof Bytes) return `Uint8Array(${value.bytes.length}) [${value.bytes.join(",")}]`
   if (depth > MAX_CONSOLE_DEPTH) return "..."
   if (seen.has(value)) return "[Circular]"
