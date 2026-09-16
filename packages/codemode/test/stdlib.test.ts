@@ -731,7 +731,7 @@ describe("Headers", () => {
       type: "object",
       is: true,
     })
-    expect(result.ok && result.logs?.[0]).toBe('Headers(2) {"b":"2","x-a":"1"}')
+    expect(result.ok && result.logs?.[0]).toBe('Headers {"b":"2","x-a":"1"}')
   })
 
   test("rejects what it cannot build from, and invalid names and values, with TypeErrors the program can catch", async () => {
@@ -758,6 +758,7 @@ describe("Headers", () => {
           message(() => headers.append("a")),
           message(() => headers.forEach()),
           message(() => headers.forEach(1)),
+          message(() => { const get = headers.get; return get("a") }),
         ]
       `),
     ).toEqual([
@@ -777,6 +778,7 @@ describe("Headers", () => {
       "Headers.append requires 2 arguments.",
       "Headers.forEach requires 1 argument.",
       "Headers.forEach expects a function callback.",
+      "Headers.prototype.get called on incompatible receiver undefined.",
     ])
   })
 })

@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { constructor, methods, prototypeFrom, receiver, requiresNew } from "../interpreter/native.js"
-import { typeError } from "../interpreter/model.js"
-import { entries, isWrapper, Arr, HeadersObj, Obj } from "../interpreter/objects.js"
+import { PendingThrow, typeError } from "../interpreter/model.js"
+import { entries, Arr, HeadersObj, Obj } from "../interpreter/objects.js"
 import { applyCollectionCallback } from "../interpreter/callback.js"
 import { isRuntimeReference } from "../interpreter/references.js"
 import type { Interpreter } from "../interpreter/interpreter.js"
@@ -13,6 +13,7 @@ const attempt = <T>(run: () => T): T => {
   try {
     return run()
   } catch (error) {
+    if (error instanceof PendingThrow) throw error
     throw typeError(error instanceof Error ? error.message : String(error))
   }
 }
@@ -24,7 +25,7 @@ const constructHeaders = <R>(ctx: Interpreter<R>, init: unknown, proto: Obj): Ef
   return Effect.gen(function* () {
     const pairs = init instanceof Obj ? yield* readPairs(ctx, init, "new Headers(...)") : undefined
     if (pairs !== undefined) return wrap(attempt(() => new Headers(pairs)))
-    if (!(init instanceof Obj) || isWrapper(init) || isRuntimeReference(init)) {
+    if (!(init instanceof Obj) || isRuntimeReference(init)) {
       throw typeError("new Headers(...) expects a record of names to values, iterable [name, value] pairs, or Headers.")
     }
     return wrap(

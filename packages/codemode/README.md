@@ -106,7 +106,7 @@ const runtime = CodeMode.make({ tools, extensions: [web] })
 
 Every value crossing in either direction is converted, never shared: arguments come in as copies, results go out as
 copies, and a function inside a result is callable the same way. A global that shadows a built-in or another
-extension throws at `make`.
+extension throws at `CodeMode.make`.
 
 ### OpenAPI tools
 
