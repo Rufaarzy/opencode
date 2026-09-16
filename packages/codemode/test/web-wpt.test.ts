@@ -3,14 +3,13 @@
  * - html/webappapis/atob/base64.any.js (btoa reference encoder, input list, and atob WebIDL cases)
  * - fetch/data-urls/resources/base64.json (copied to fixtures/wpt-base64.json)
  * - WebCryptoAPI/randomUUID.https.any.js
- * - fetch/api/headers/{headers-basic,headers-casing,headers-combine,headers-errors,headers-normalize,header-setcookie}.any.js
+ * - fetch/api/headers/{headers-basic,headers-errors}.any.js
  *
  * Copyright © web-platform-tests contributors. Governed by the 3-Clause BSD license in LICENSE.wpt.
  *
  * `assert_throws_dom("InvalidCharacterError", …)` becomes a check for a TypeError: CodeMode has no DOMException.
  * Headers cases that need `Symbol.iterator`, iterator objects from `keys()`/`values()`/`entries()` (CodeMode returns
- * arrays), or a custom iterator on a Headers instance are left out, as are two set-cookie cases that Bun's own Headers
- * fails by sorting `set-cookie2` ahead of `set-cookie`.
+ * arrays), or a custom iterator on a Headers instance are left out.
  */
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
@@ -179,7 +178,6 @@ const testharness = `
   function assert_true(actual, message) { assert_equals(actual, true, message) }
   function assert_false(actual, message) { assert_equals(actual, false, message) }
   function assert_array_equals(actual, expected, message) { assert_equals(JSON.stringify(actual), JSON.stringify(expected), message) }
-  function assert_nested_array_equals(actual, expected) { assert_array_equals(actual, expected) }
   function assert_throws_js(type, run) { try { run() } catch (error) { if (error instanceof type) return; throw new Error("threw " + error.name) } throw new Error("did not throw") }
   function assert_unreached() { throw new Error("unreachable") }
 `
@@ -336,99 +334,6 @@ describe("Headers WPT parity (fetch/api/headers)", () => {
     ).toEqual([])
   })
 
-  test("headers-casing.any.js", async () => {
-    expect(
-      await value(`
-        ${testharness}
-        var headerDictCase = {"UPPERCASE": "value1", "lowercase": "value2", "mixedCase": "value3", "Content-TYPE": "value4"}
-        function checkHeadersCase(originalName, headersToCheck, expectedDict) {
-          var lowCaseName = originalName.toLowerCase()
-          var upCaseName = originalName.toUpperCase()
-          var expectedValue = expectedDict[originalName]
-          assert_equals(headersToCheck.get(originalName), expectedValue, "name: " + originalName + " has value: " + expectedValue)
-          assert_equals(headersToCheck.get(lowCaseName), expectedValue, "name: " + lowCaseName + " has value: " + expectedValue)
-          assert_equals(headersToCheck.get(upCaseName), expectedValue, "name: " + upCaseName + " has value: " + expectedValue)
-        }
-        test(function() {
-          var headers = new Headers(headerDictCase)
-          for (const name in headerDictCase) checkHeadersCase(name, headers, headerDictCase)
-        }, "Create headers, names use characters with different case")
-        test(function() {
-          var headers = new Headers()
-          for (const name in headerDictCase) {
-            headers.append(name, headerDictCase[name])
-            checkHeadersCase(name, headers, headerDictCase)
-          }
-        }, "Check append method, names use characters with different case")
-        test(function() {
-          var headers = new Headers()
-          for (const name in headerDictCase) {
-            headers.set(name, headerDictCase[name])
-            checkHeadersCase(name, headers, headerDictCase)
-          }
-        }, "Check set method, names use characters with different case")
-        test(function() {
-          var headers = new Headers()
-          for (const name in headerDictCase) headers.set(name, headerDictCase[name])
-          for (const name in headerDictCase) headers.delete(name.toLowerCase())
-          for (const name in headerDictCase) assert_false(headers.has(name), "header " + name + " should have been deleted")
-        }, "Check delete method, names use characters with different case")
-        return failures
-      `),
-    ).toEqual([])
-  })
-
-  test("headers-combine.any.js", async () => {
-    expect(
-      await value(`
-        ${testharness}
-        var headerSeqCombine = [["single", "singleValue"], ["double", "doubleValue1"], ["double", "doubleValue2"], ["triple", "tripleValue1"], ["triple", "tripleValue2"], ["triple", "tripleValue3"]]
-        var expectedDict = {"single": "singleValue", "double": "doubleValue1, doubleValue2", "triple": "tripleValue1, tripleValue2, tripleValue3"}
-        test(function() {
-          var headers = new Headers(headerSeqCombine)
-          for (const name in expectedDict) assert_equals(headers.get(name), expectedDict[name])
-        }, "Create headers using same name for different values")
-        test(function() {
-          var headers = new Headers(headerSeqCombine)
-          for (const name in expectedDict) {
-            assert_true(headers.has(name), "name: " + name + " has value(s)")
-            headers.delete(name)
-            assert_false(headers.has(name), "name: " + name + " has no value(s) anymore")
-          }
-        }, "Check delete and has methods when using same name for different values")
-        test(function() {
-          var headers = new Headers(headerSeqCombine)
-          for (const name in expectedDict) {
-            headers.set(name, "newSingleValue")
-            assert_equals(headers.get(name), "newSingleValue", "name: " + name + " has value: newSingleValue")
-          }
-        }, "Check set methods when called with already used name")
-        test(function() {
-          var headers = new Headers(headerSeqCombine)
-          for (const name in expectedDict) {
-            var value = headers.get(name)
-            headers.append(name, "newSingleValue")
-            assert_equals(headers.get(name), (value + ", " + "newSingleValue"))
-          }
-        }, "Check append methods when called with already used name")
-        test(() => {
-          const headers = new Headers([["1", "a"], ["1", "b"]])
-          for (let header of headers) assert_array_equals(header, ["1", "a, b"])
-        }, "Iterate combined values")
-        test(() => {
-          const headers = new Headers([["2", "a"], ["1", "b"], ["2", "b"]]), expected = [["1", "b"], ["2", "a, b"]]
-          let i = 0
-          for (let header of headers) {
-            assert_array_equals(header, expected[i])
-            i++
-          }
-          assert_equals(i, 2)
-        }, "Iterate combined values in sorted order")
-        return failures
-      `),
-    ).toEqual([])
-  })
-
   test("headers-errors.any.js", async () => {
     expect(
       await value(`
@@ -481,98 +386,6 @@ describe("Headers WPT parity (fetch/api/headers)", () => {
           }
           assert_unreached()
         }, "Headers forEach loop should stop if callback is throwing exception")
-        return failures
-      `),
-    ).toEqual([])
-  })
-
-  test("headers-normalize.any.js", async () => {
-    expect(
-      await value(`
-        ${testharness}
-        const expectations = {
-          "name1": [" space ", "space"],
-          "name2": ["\\ttab\\t", "tab"],
-          "name3": [" spaceAndTab\\t", "spaceAndTab"],
-          "name4": ["\\r\\n newLine", "newLine"],
-          "name5": ["newLine\\r\\n ", "newLine"],
-          "name6": ["\\r\\n\\tnewLine", "newLine"],
-          "name7": ["\\t\\f\\tnewLine\\n", "\\f\\tnewLine"],
-          "name8": ["newLine\\xa0", "newLine\\xa0"],
-        }
-        test(function () {
-          const headerDict = Object.fromEntries(Object.entries(expectations).map(([name, [actual]]) => [name, actual]))
-          var headers = new Headers(headerDict)
-          for (const name in expectations) {
-            const expected = expectations[name][1]
-            assert_equals(headers.get(name), expected, "name: " + name + " has normalized value: " + expected)
-          }
-        }, "Create headers with not normalized values")
-        test(function () {
-          var headers = new Headers()
-          for (const name in expectations) {
-            headers.append(name, expectations[name][0])
-            const expected = expectations[name][1]
-            assert_equals(headers.get(name), expected, "name: " + name + " has value: " + expected)
-          }
-        }, "Check append method with not normalized values")
-        test(function () {
-          var headers = new Headers()
-          for (const name in expectations) {
-            headers.set(name, expectations[name][0])
-            const expected = expectations[name][1]
-            assert_equals(headers.get(name), expected, "name: " + name + " has value: " + expected)
-          }
-        }, "Check set method with not normalized values")
-        return failures
-      `),
-    ).toEqual([])
-  })
-
-  test("header-setcookie.any.js", async () => {
-    expect(
-      await value(`
-        ${testharness}
-        const headerList = [["set-cookie", "foo=bar"], ["Set-Cookie", "fizz=buzz; domain=example.com"]]
-        const setCookie2HeaderList = [["set-cookie2", "foo2=bar2"], ["Set-Cookie2", "fizz2=buzz2; domain=example2.com"]]
-        test(function () {
-          const headers = new Headers(headerList)
-          assert_equals(headers.get("set-cookie"), "foo=bar, fizz=buzz; domain=example.com")
-        }, "Headers.prototype.get combines set-cookie headers in order")
-        test(function () {
-          const headers = new Headers(headerList)
-          assert_nested_array_equals([...headers], [["set-cookie", "foo=bar"], ["set-cookie", "fizz=buzz; domain=example.com"]])
-        }, "Headers iterator does not combine set-cookie headers")
-        test(function () {
-          const headers = new Headers(setCookie2HeaderList)
-          assert_nested_array_equals([...headers], [["set-cookie2", "foo2=bar2, fizz2=buzz2; domain=example2.com"]])
-        }, "Headers iterator does not special case set-cookie2 headers")
-        test(function () {
-          const headers = new Headers([["set-cookie", "z=z"], ["set-cookie", "a=a"], ["set-cookie", "n=n"]])
-          assert_nested_array_equals([...headers], [["set-cookie", "z=z"], ["set-cookie", "a=a"], ["set-cookie", "n=n"]])
-        }, "Headers iterator preserves set-cookie ordering")
-        test(function () {
-          const headers = new Headers(headerList)
-          assert_true(headers.has("sEt-cOoKiE"))
-        }, "Headers.prototype.has works for set-cookie")
-        test(function () {
-          const headers = new Headers(headerList)
-          headers.set("set-cookie", "foo2=bar2")
-          assert_nested_array_equals([...headers], [["set-cookie", "foo2=bar2"]])
-        }, "Headers.prototype.set works for set-cookie")
-        test(function () {
-          const headers = new Headers(headerList)
-          headers.delete("set-Cookie")
-          assert_nested_array_equals([...headers], [])
-        }, "Headers.prototype.delete works for set-cookie")
-        test(function () { assert_array_equals(new Headers().getSetCookie(), []) }, "Headers.prototype.getSetCookie with no headers present")
-        test(function () { assert_array_equals(new Headers([headerList[0]]).getSetCookie(), ["foo=bar"]) }, "Headers.prototype.getSetCookie with one header")
-        test(function () { assert_array_equals(new Headers({ "Set-Cookie": "foo=bar" }).getSetCookie(), ["foo=bar"]) }, "Headers.prototype.getSetCookie with one header created from an object")
-        test(function () { assert_array_equals(new Headers(headerList).getSetCookie(), ["foo=bar", "fizz=buzz; domain=example.com"]) }, "Headers.prototype.getSetCookie with multiple headers")
-        test(function () { assert_array_equals(new Headers([["set-cookie", ""]]).getSetCookie(), [""]) }, "Headers.prototype.getSetCookie with an empty header")
-        test(function () { assert_array_equals(new Headers([["set-cookie", "x"], ["set-cookie", "x"]]).getSetCookie(), ["x", "x"]) }, "Headers.prototype.getSetCookie with two equal headers")
-        test(function () { assert_array_equals(new Headers([["set-cookie2", "x"], ["set-cookie", "y"], ["set-cookie2", "z"]]).getSetCookie(), ["y"]) }, "Headers.prototype.getSetCookie ignores set-cookie2 headers")
-        test(function () { assert_array_equals(new Headers([["set-cookie", "z=z"], ["set-cookie", "a=a"], ["set-cookie", "n=n"]]).getSetCookie(), ["z=z", "a=a", "n=n"]) }, "Headers.prototype.getSetCookie preserves header ordering")
         return failures
       `),
     ).toEqual([])

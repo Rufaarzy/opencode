@@ -21,7 +21,6 @@ const attempt = <T>(run: () => T): T => {
 const constructHeaders = <R>(ctx: Interpreter<R>, init: unknown, proto: Obj): Effect.Effect<HeadersObj, unknown, R> => {
   const wrap = (headers: Headers) => new HeadersObj(proto, headers)
   if (init === undefined) return Effect.succeed(wrap(new Headers()))
-  if (init instanceof HeadersObj) return Effect.succeed(wrap(new Headers(init.headers)))
   return Effect.gen(function* () {
     const pairs = init instanceof Obj ? yield* readPairs(ctx, init, "new Headers(...)") : undefined
     if (pairs !== undefined) return wrap(attempt(() => new Headers(pairs)))
